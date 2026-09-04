@@ -5,6 +5,17 @@ Sources:
 - Companion PDF: `AgentOps/raw/guides/2026-07-15-effort-decoder-guide-mark-kashef.pdf`
 - Used by `/decode-effort` (Claude Code + Codex editions)
 
+## Calibration vocabulary
+
+Every model-specific recommendation should state its evidence status:
+
+- **official-guidance-only** — based on current provider documentation; no local task sweep yet.
+- **empirically-exercised** — a named local control suite has run, but the suite is too small or task-specific to establish a general ladder.
+- **empirically-calibrated** — repeated, named controls support the recommendation for a stated task class and model generation.
+- **stale/unknown** — the current model generation or evidence cannot be identified confidently.
+
+An evidence status is a confidence disclosure, not a reason to stop producing a recommendation. Never convert a small fixture result into a universal policy.
+
 ## What effort actually is
 
 A **budget for how long the model is allowed to think** before it answers.
@@ -50,7 +61,18 @@ Google vibe-coding whitepaper rule of thumb (directional, not lab-precise): ~**1
 
 One-line cheat sheet:
 
-> *Model first. Start low. Climb on evidence. New model, reset dial. Never send the committee to a multiple-choice question.*
+> *Model first. Start low where the task permits. Climb on evidence. New model, reset dial. Never send the committee to a multiple-choice question.*
+
+“Start low” is a calibration and cost-optimization prior, not permission to ignore a provider's documented model default. If current model guidance says `high` by default, report that fact and use task evidence to move lower or higher. Do not turn either phrase into a universal setting.
+
+## Operating mode is context, not effort
+
+Record whether the work is actively watched in one session, unattended, or running beside other live sessions. Use that context to explain handoff, collision, quota, and latency risks.
+
+- **Parallel-session** does not prove quota pressure.
+- **Quota pressure** requires evidence about limits or spend.
+- More effort does not repair stale context, a shared worktree collision, or a missing handoff.
+- An open terminal is not the same thing as a human actively watching the run.
 
 ## Universal rung meanings
 
@@ -168,7 +190,9 @@ Always return:
 8. **Climb if** (concrete failure signals)
 9. **Quota note** (subagents, dual-machine, don't max by default)
 10. **Optional twin** — same recommendation mapped to the other harness if useful
-11. **Confidence** high/medium/low
+11. **Operating mode** — actively watched single-session | unattended | parallel-session
+12. **Calibration** — official-guidance-only | empirically-exercised | empirically-calibrated | stale/unknown
+13. **Confidence** high/medium/low
 
 Do **not** change the user's model/effort settings yourself unless they ask. This skill **recommends only**.
 

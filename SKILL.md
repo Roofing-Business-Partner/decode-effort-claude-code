@@ -4,7 +4,7 @@ description: "User-only slash command. Recommend Claude model + effort for this 
 disable-model-invocation: true
 user-invocable: true
 argument-hint: "[session | ADA-### | free-text task]"
-version: 1.2.0
+version: 1.3.0
 author: Claudio / Adam Sand (source: Mark Kashef)
 license: MIT
 ---
@@ -42,12 +42,15 @@ You are in **Claude Code**. Use Claude effort labels. Optionally note the Codex 
 4. Score difficulty signals (use core decision tree):
    - known shape vs ambiguous
    - attended vs unattended
+   - operating mode: actively watched single-session, unattended, or parallel-session; use this for context/handoff counsel, not automatic effort inflation
    - single-file vs multi-file
    - risk if wrong (schema, security, multi-tenant, credentials)
    - verification-of-another-agent vs original build
-5. **Model first** (Sonnet workhorse vs Opus-class frontier), then **effort** (start low; climb only on evidence).
+5. **Model first** (workhorse vs frontier/current model), then **effort**. The generic calibration prior is to start low and climb only on evidence; when a provider documents a model-specific default, state it. For Fable 5.1, Anthropic documents `high` as the default, so do not silently collapse that fact into a universal low rule.
+   - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**
 6. Emit **Output contract** exactly.
 7. **Recommend only** — do not change model/effort unless Adam says “set it.”
+   - **Recommend only; do not change settings unless Adam explicitly says “set it.”**
 
 ## Output contract (required)
 
@@ -56,6 +59,7 @@ You are in **Claude Code**. Use Claude effort labels. Optionally note the Codex 
 - **Harness:** Claude Code
 - **Task:** <1–2 lines>
 - **Difficulty:** low | medium | high | long-agentic | linchpin
+- **Operating mode:** actively watched single-session | unattended | parallel-session
 - **Model:** <workhorse or frontier + name if known>
 - **Effort:** `<native>` (universal: FLOOR|LOW|MEDIUM|HIGH|XHIGH|MAX · metaphor)
 - **Set it:** `claude --effort <native>`
@@ -63,6 +67,7 @@ You are in **Claude Code**. Use Claude effort labels. Optionally note the Codex 
 - **Climb if:** <concrete failure signals>
 - **Codex twin (optional):** model + `model_reasoning_effort=…` if dual-machine
 - **Quota:** subagents inherit; avoid xhigh/max parent fan-out
+- **Calibration:** official-guidance-only | empirically-exercised | empirically-calibrated | stale/unknown
 - **Confidence:** high | medium | low
 ```
 
@@ -72,7 +77,8 @@ You are in **Claude Code**. Use Claude effort labels. Optionally note the Codex 
 - Mini long unattended: xhigh only when justified
 - Verification sessions: frontier + **high**
 - Known-shape fixes: workhorse + **low**/**medium**
-- Unset Claude effort ≈ **high** — say so if he’s paying default blind
+- Fable 5.1's documented default effort is **high**; do not assume an effort label carries the same meaning across model generations
+- If the current model generation is not named in the ladder's calibration record, downgrade confidence rather than inventing a calibrated result
 
 ## Sources
 
@@ -80,4 +86,6 @@ You are in **Claude Code**. Use Claude effort labels. Optionally note the Codex 
 - `references/claude-ladder.md`
 - `references/openai-codex-ladder.md`
 - Video: https://youtu.be/4__5q76f04s
+- Anthropic Fable 5.1 prompting guidance: https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1
+- Anthropic Claude Code model configuration: https://docs.anthropic.com/en/docs/claude-code/model-config
 - Guide: `AgentOps/raw/guides/2026-07-15-effort-decoder-guide-mark-kashef.pdf`
