@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 
@@ -44,6 +45,15 @@ def read_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
     return fields, errors
 
 
+def strip_html_comments(text: str) -> str:
+    return re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+
+
+def extract_output_contract(text: str) -> str:
+    match = re.search(r"(?ms)^##\s+Output contract\b.*?(?=^##\s+|\Z)", text)
+    return match.group(0) if match else ""
+
+
 def validate_skill_file(
     path: Path, expected_version: str, edition: str | None = None
 ) -> list[str]:
@@ -51,6 +61,8 @@ def validate_skill_file(
     if not path.is_file():
         return [f"missing skill file: {path}"]
     text = path.read_text(encoding="utf-8")
+    clean_text = strip_html_comments(text)
+    contract = extract_output_contract(clean_text)
     fields, parse_errors = read_frontmatter(text)
     errors.extend(f"{path}: {error}" for error in parse_errors)
     if fields.get("name") != "decode-effort":
@@ -64,9 +76,9 @@ def validate_skill_file(
     if fields.get("user-invocable") != "true":
         errors.append(f"{path}: user-invocable must be true")
     for token in REQUIRED_OUTPUT_FIELDS:
-        if token not in text:
+        if token not in contract:
             errors.append(f"{path}: missing output-contract field {token}")
-    lower = text.lower()
+    lower = clean_text.lower()
     if "recommend only" not in lower:
         errors.append(f"{path}: recommend-only behavior is not stated")
     if "do not change" not in lower and "do not auto-apply" not in lower:
@@ -75,19 +87,19 @@ def validate_skill_file(
         errors.append(f"{path}: model-first ordering is not stated")
     if "climb" not in lower or "evidence" not in lower:
         errors.append(f"{path}: evidence-based climbing is not stated")
-    if "official-guidance-only" not in text or "stale/unknown" not in text:
+    if "official-guidance-only" not in clean_text or "stale/unknown" not in clean_text:
         errors.append(f"{path}: calibration vocabulary is incomplete")
 
     detected_edition: str | None = None
-    if "Claude Code Edition" in text:
+    if "Claude Code Edition" in clean_text:
         detected_edition = "claude"
-        if "**Effort:**" not in text or "claude --effort" not in text:
+        if "**Effort:**" not in contract or "claude --effort" not in clean_text:
             errors.append(f"{path}: Claude effort output/set instructions are incomplete")
-    if "Codex Edition" in text:
+    if "Codex Edition" in clean_text:
         if detected_edition is not None:
             errors.append(f"{path}: multiple edition identities are present")
         detected_edition = "codex"
-        if "**Reasoning effort:**" not in text or "model_reasoning_effort" not in text:
+        if "**Reasoning effort:**" not in contract or "model_reasoning_effort" not in clean_text:
             errors.append(f"{path}: Codex reasoning-effort output/set instructions are incomplete")
     if edition is not None and detected_edition != edition:
         errors.append(

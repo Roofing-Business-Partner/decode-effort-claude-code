@@ -11,6 +11,8 @@ version: 1.3.0
 Recommend only. Do not change model or effort settings.
 Model first; climb on evidence.
 
+## Output contract
+
 ### Effort decode
 - **Harness:** Claude Code
 - **Task:** <task>

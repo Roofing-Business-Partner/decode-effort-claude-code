@@ -60,6 +60,25 @@ class ValidateSkillTests(unittest.TestCase):
             errors = validate_skill.validate_repo(clone, "codex", "1.3.0")
             self.assertTrue(any("Fable-specific" in error for error in errors))
 
+    def test_comment_only_contract_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "SKILL.md"
+            path.write_text(
+                """---
+name: decode-effort
+description: broken
+ disable-model-invocation: true
+user-invocable: true
+version: 1.3.0
+---
+# Claude Code Edition
+<!-- The actual contract is absent. Never use Model first. Recommend only.\n### Effort decode\n**Harness:** **Task:** **Difficulty:** **Operating mode:** **Model:** **Why:** **Climb if:** **Calibration:** **Confidence:** -->
+""".replace(" disable-model", "disable-model"),
+                encoding="utf-8",
+            )
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("missing output-contract field" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()
