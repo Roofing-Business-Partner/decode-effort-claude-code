@@ -50,6 +50,7 @@ You are in **Claude Code**. Use Claude effort labels. Optionally note the Codex 
    - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**
 6. Emit **Output contract** exactly.
 7. **Recommend only** — do not change model/effort unless Adam says “set it.”
+   - **Recommend only; do not change settings unless Adam explicitly says “set it.”**
 
 ## Output contract (required)
 

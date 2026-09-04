@@ -92,6 +92,18 @@ version: 1.3.0
             self.assertTrue(any("affirmative model-first" in error for error in errors))
             self.assertTrue(any("affirmative evidence-based" in error for error in errors))
 
+    def test_negated_recommendation_boundary_fails(self):
+        source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
+        negated = source.replace(
+            "   - **Recommend only; do not change settings unless Adam explicitly says “set it.”**",
+            "   - **Do not recommend only; change settings unless Adam explicitly says “set it.”**",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "negated-boundary.md"
+            path.write_text(negated, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("affirmative recommendation-only" in error for error in errors))
+
     def test_decoy_guidance_outside_procedure_fails(self):
         source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         reversed_procedure = source.replace(
@@ -110,6 +122,15 @@ version: 1.3.0
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("affirmative model-first" in error for error in errors))
             self.assertTrue(any("affirmative evidence-based" in error for error in errors))
+
+    def test_indented_frontmatter_key_fails(self):
+        source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
+        indented = source.replace("name: decode-effort", "  name: decode-effort", 1)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "indented.md"
+            path.write_text(indented, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("root-level" in error for error in errors))
 
     def test_frontmatter_comments_and_quotes(self):
         source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")

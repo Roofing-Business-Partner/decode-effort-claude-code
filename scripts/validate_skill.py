@@ -73,6 +73,9 @@ def read_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
     for line in text[4:end].splitlines():
         if not line.strip():
             continue
+        if line[0].isspace():
+            errors.append(f"frontmatter key must be root-level: {line}")
+            continue
         if ":" not in line:
             errors.append(f"frontmatter line is not key:value: {line}")
             continue
@@ -128,10 +131,12 @@ def validate_skill_file(
     lower = procedure.lower()
     if not procedure:
         errors.append(f"{path}: missing operative Procedure section")
-    if "recommend only" not in lower:
-        errors.append(f"{path}: recommend-only behavior is not stated")
-    if "do not change" not in lower and "do not auto-apply" not in lower:
-        errors.append(f"{path}: automatic setting-change prohibition is not stated")
+    affirmative_boundary = re.search(
+        r'(?mi)^\s*-\s+\*\*recommend only; do not change settings unless adam explicitly says “set it.”\*\*\s*$',
+        procedure,
+    )
+    if affirmative_boundary is None:
+        errors.append(f"{path}: affirmative recommendation-only boundary is not stated")
     affirmative_workflow = re.search(
         r"(?mi)^\s*-\s+\*\*model first; choose the task-appropriate effort second\.\*\*\s+\*\*climb only when evidence justifies it\.\*\*\s*$",
         procedure,
