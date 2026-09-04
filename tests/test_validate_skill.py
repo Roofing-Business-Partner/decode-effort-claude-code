@@ -14,6 +14,15 @@ spec.loader.exec_module(validate_skill)
 
 
 class ValidateSkillTests(unittest.TestCase):
+    def test_duplicate_frontmatter_key_fails(self):
+        source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
+        duplicate = source.replace("name: decode-effort", "name: rejected-first-value\nname: decode-effort", 1)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate.md"
+            path.write_text(duplicate, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("duplicate root-level" in error for error in errors))
+
     def test_current_repo_passes(self):
         errors = validate_skill.validate_repo(ROOT, "claude", "1.3.0")
         self.assertEqual(errors, [])
@@ -117,6 +126,19 @@ version: 1.3.0
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("contradictory Procedure" in error for error in errors))
 
+    def test_paraphrased_contradictory_procedure_fails(self):
+        source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        contradiction = source.replace(
+            "\n## Output contract (required)\n",
+            "\n   - Pick the effort first, then the model; escalate effort regardless of evidence; tune settings on your own.\n\n## Output contract (required)\n",
+            1,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "paraphrased-contradiction.md"
+            path.write_text(contradiction, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("contradictory Procedure" in error for error in errors))
+
     def test_decoy_guidance_outside_procedure_fails(self):
         source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         reversed_procedure = source.replace(
@@ -191,6 +213,18 @@ version: 1.3.0
             path.write_text(malformed, encoding="utf-8")
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("unbalanced quoted scalar" in error for error in errors))
+
+    def test_nonoperative_field_declarations_fail(self):
+        source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        prefix, suffix = source.split("## Output contract (required)", 1)
+        nonoperative = prefix + """## Output contract (required)
+These fields are deprecated, optional, and forbidden in output.
+""" + suffix
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "nonoperative-fields.md"
+            path.write_text(nonoperative, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("non-operative Output contract" in error for error in errors))
 
     def test_nonoperative_output_contract_prose_fails(self):
         source = (ROOT / "SKILL.md").read_text(encoding="utf-8")

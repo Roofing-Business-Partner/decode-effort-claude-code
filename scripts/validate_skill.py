@@ -30,6 +30,16 @@ CONTRADICTORY_PROCEDURE_PATTERNS = (
     r"\b(?:do not|don't|never|avoid)\s+(?:climb|climbing)\b[^.\n]*(?:evidence|justify)",
     r"\b(?:change|set|modify)\s+(?:the\s+)?(?:model|effort|settings|config)\b[^.\n]*(?:automatically|yourself|without|on your own)",
     r"\b(?:do not|don't|never)\s+recommend only\b",
+    r"\b(?:pick|choose|select)\s+(?:the\s+)?(?:task-appropriate\s+)?effort\s+first\b[^.\n]*(?:then|before)\s+(?:the\s+)?model\b",
+    r"\b(?:escalate|increase|raise|climb)\s+(?:the\s+)?effort\b[^.\n]*(?:regardless|irrespective|without|independent)\s+(?:of\s+)?evidence\b",
+    r"\b(?:tune|adjust)\s+(?:the\s+)?(?:settings|config|model|effort)\b[^.\n]*(?:on your own|yourself|automatically|without)\b",
+)
+NONOPERATIVE_CONTRACT_PATTERNS = (
+    r"\bdeprecated\b",
+    r"\bnon[- ]operative\b",
+    r"\bforbidden\s+in\s+output\b",
+    r"\bmust never be output\b",
+    r"\bnever be output\b",
 )
 
 
@@ -75,6 +85,7 @@ def read_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
     if end < 0:
         return {}, ["SKILL.md frontmatter is not closed"]
     fields: dict[str, str] = {}
+    seen_keys: set[str] = set()
     for line in text[4:end].splitlines():
         if not line.strip():
             continue
@@ -85,8 +96,16 @@ def read_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
             errors.append(f"frontmatter line is not key:value: {line}")
             continue
         key, value = line.split(":", 1)
+        key = key.strip()
+        if not key:
+            errors.append("frontmatter key cannot be empty")
+            continue
+        if key in seen_keys:
+            errors.append(f"duplicate root-level frontmatter key: {key}")
+            continue
+        seen_keys.add(key)
         try:
-            fields[key.strip()] = parse_scalar(value)
+            fields[key] = parse_scalar(value)
         except ValueError as exc:
             errors.append(f"frontmatter value for {key.strip()} is invalid: {exc}")
     return fields, errors
@@ -164,6 +183,10 @@ def validate_skill_file(
     for pattern in CONTRADICTORY_PROCEDURE_PATTERNS:
         if re.search(pattern, procedure, flags=re.IGNORECASE):
             errors.append(f"{path}: contradictory Procedure directive is present")
+            break
+    for pattern in NONOPERATIVE_CONTRACT_PATTERNS:
+        if re.search(pattern, contract, flags=re.IGNORECASE):
+            errors.append(f"{path}: non-operative Output contract directive is present")
             break
     if "official-guidance-only" not in clean_text or "stale/unknown" not in clean_text:
         errors.append(f"{path}: calibration vocabulary is incomplete")
