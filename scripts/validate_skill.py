@@ -128,6 +128,18 @@ def extract_output_contract(text: str) -> str:
     return extract_section(text, "Output contract", allow_parenthetical=True)
 
 
+def count_section_headings(
+    text: str, heading: str, allow_parenthetical: bool = False
+) -> int:
+    suffix = r"(?:[ \t]+\([^)]*\))?" if allow_parenthetical else ""
+    return len(
+        re.findall(
+            rf"(?mi)^##[ \t]+{re.escape(heading)}{suffix}[ \t]*$",
+            text,
+        )
+    )
+
+
 def has_output_field(contract: str, token: str) -> bool:
     if token == "### Effort decode":
         return re.search(r"(?mi)^###[ \t]+Effort decode[ \t]*$", contract) is not None
@@ -146,6 +158,10 @@ def validate_skill_file(
         return [f"missing skill file: {path}"]
     text = path.read_text(encoding="utf-8")
     clean_text = strip_html_comments(text)
+    procedure_heading_count = count_section_headings(clean_text, "Procedure")
+    output_heading_count = count_section_headings(
+        clean_text, "Output contract", allow_parenthetical=True
+    )
     procedure = extract_section(clean_text, "Procedure")
     contract = extract_output_contract(clean_text)
     fields, parse_errors = read_frontmatter(text)
@@ -164,6 +180,14 @@ def validate_skill_file(
         if not has_output_field(contract, token):
             errors.append(f"{path}: missing output-contract field {token}")
     lower = procedure.lower()
+    if procedure_heading_count != 1:
+        errors.append(
+            f"{path}: expected exactly one operative Procedure heading, found {procedure_heading_count}"
+        )
+    if output_heading_count != 1:
+        errors.append(
+            f"{path}: expected exactly one Output contract heading, found {output_heading_count}"
+        )
     if not procedure:
         errors.append(f"{path}: missing operative Procedure section")
     affirmative_boundary = re.search(

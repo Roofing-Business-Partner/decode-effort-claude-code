@@ -176,6 +176,15 @@ version: 1.3.0
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("affirmative model-first" in error for error in errors))
 
+    def test_duplicate_procedure_sections_fail(self):
+        source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        duplicate = source + "\n## Procedure\nNever use model first. Choose effort before the model.\n"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate-procedure.md"
+            path.write_text(duplicate, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("exactly one operative Procedure" in error for error in errors))
+
     def test_indented_frontmatter_key_fails(self):
         source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
         indented = source.replace("name: decode-effort", "  name: decode-effort", 1)
