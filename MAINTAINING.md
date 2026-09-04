@@ -81,7 +81,7 @@ python3 -m unittest discover -s tests -v
 git diff --check
 ```
 
-The validator is intentionally small and standard-library-only. It checks frontmatter, version, user-invoked-only/recommend-only flags, required output fields, calibration vocabulary, references, and edition-specific model guidance. Tests must include a good fixture and a deliberately broken fixture.
+The validator is intentionally small and standard-library-only. Release and installed scopes perform exact SHA-256 checks against the `KNOWN_RELEASE_SHA256` manifest for `SKILL.md` and all three references; this is not a generic YAML or Markdown semantic parser. Unit tests may use the separate known-good fixture hash, but release validation never accepts that fixture. Any intentional contract change requires a new versioned release and a manifest update in the same coordinated patch. Tests must include a good fixture and a deliberately broken fixture.
 
 ## Release discipline
 

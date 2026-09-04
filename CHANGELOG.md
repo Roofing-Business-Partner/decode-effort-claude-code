@@ -10,7 +10,7 @@ GitHub Release publication is pending merged-main verification and Adam's explic
 - Operating mode context: actively watched single-session, unattended, or parallel-session.
 - Fable 5.1 Claude Code guidance, including the pinned model ID, documented default effort, adaptive thinking, label drift, low-effort retrieval caution, and xhigh/max restraint.
 - `MAINTAINING.md` proposal-first skill evolution lifecycle.
-- `scripts/validate_skill.py` and good/broken fixture tests.
+- `scripts/validate_skill.py` exact known-contract release manifest and good/broken fixture tests.
 
 ### Preserved
 
