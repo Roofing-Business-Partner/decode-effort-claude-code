@@ -79,6 +79,17 @@ version: 1.3.0
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("missing output-contract field" in error for error in errors))
 
+    def test_negated_guidance_fails(self):
+        source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
+        negated = source.replace("Model first; climb on evidence.", "Do not use Model first; do not climb on evidence.")
+        negated = negated.replace("Model first; choose the task-appropriate effort second. Climb only when evidence justifies it.", "Do not use Model first. Do not climb on evidence.")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "negated.md"
+            path.write_text(negated, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("affirmative model-first" in error for error in errors))
+            self.assertTrue(any("affirmative evidence-based" in error for error in errors))
+
     def test_frontmatter_comments_and_quotes(self):
         source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
         valid = source.replace(

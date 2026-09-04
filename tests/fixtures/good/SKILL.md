@@ -10,6 +10,7 @@ version: 1.3.0
 
 Recommend only. Do not change model or effort settings.
 Model first; climb on evidence.
+Model first; choose the task-appropriate effort second. Climb only when evidence justifies it.
 
 ## Output contract
 

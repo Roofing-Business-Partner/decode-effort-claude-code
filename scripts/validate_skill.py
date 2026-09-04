@@ -122,10 +122,10 @@ def validate_skill_file(
         errors.append(f"{path}: recommend-only behavior is not stated")
     if "do not change" not in lower and "do not auto-apply" not in lower:
         errors.append(f"{path}: automatic setting-change prohibition is not stated")
-    if "model first" not in lower:
-        errors.append(f"{path}: model-first ordering is not stated")
-    if "climb" not in lower or "evidence" not in lower:
-        errors.append(f"{path}: evidence-based climbing is not stated")
+    if "model first; choose the task-appropriate effort second." not in lower:
+        errors.append(f"{path}: affirmative model-first ordering is not stated")
+    if "climb only when evidence justifies it." not in lower:
+        errors.append(f"{path}: affirmative evidence-based climbing is not stated")
     if "official-guidance-only" not in clean_text or "stale/unknown" not in clean_text:
         errors.append(f"{path}: calibration vocabulary is incomplete")
 

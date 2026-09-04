@@ -47,6 +47,7 @@ You are in **Claude Code**. Use Claude effort labels. Optionally note the Codex 
    - risk if wrong (schema, security, multi-tenant, credentials)
    - verification-of-another-agent vs original build
 5. **Model first** (workhorse vs frontier/current model), then **effort**. The generic calibration prior is to start low and climb only on evidence; when a provider documents a model-specific default, state it. For Fable 5.1, Anthropic documents `high` as the default, so do not silently collapse that fact into a universal low rule.
+   - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**
 6. Emit **Output contract** exactly.
 7. **Recommend only** — do not change model/effort unless Adam says “set it.”
 
