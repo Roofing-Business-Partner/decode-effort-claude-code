@@ -90,7 +90,8 @@ def strip_html_comments(text: str) -> str:
 
 def extract_section(text: str, heading: str) -> str:
     match = re.search(
-        rf"(?ms)^##\s+{re.escape(heading)}\b.*?(?=^##\s+|\Z)", text
+        rf"(?ms)^##[ \t]+{re.escape(heading)}(?:[ \t]+\([^)]*\))?[ \t]*$.*?(?=^##[ \t]+|\Z)",
+        text,
     )
     return match.group(0) if match else ""
 
@@ -131,9 +132,13 @@ def validate_skill_file(
         errors.append(f"{path}: recommend-only behavior is not stated")
     if "do not change" not in lower and "do not auto-apply" not in lower:
         errors.append(f"{path}: automatic setting-change prohibition is not stated")
-    if "model first; choose the task-appropriate effort second." not in lower:
+    affirmative_workflow = re.search(
+        r"(?mi)^\s*-\s+\*\*model first; choose the task-appropriate effort second\.\*\*\s+\*\*climb only when evidence justifies it\.\*\*\s*$",
+        procedure,
+    )
+    if affirmative_workflow is None:
         errors.append(f"{path}: affirmative model-first ordering is not stated")
-    if "climb only when evidence justifies it." not in lower:
+    if affirmative_workflow is None:
         errors.append(f"{path}: affirmative evidence-based climbing is not stated")
     if "official-guidance-only" not in clean_text or "stale/unknown" not in clean_text:
         errors.append(f"{path}: calibration vocabulary is incomplete")

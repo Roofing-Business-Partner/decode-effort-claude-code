@@ -81,8 +81,10 @@ version: 1.3.0
 
     def test_negated_guidance_fails(self):
         source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
-        negated = source.replace("Model first; climb on evidence.", "Do not use Model first; do not climb on evidence.")
-        negated = negated.replace("Model first; choose the task-appropriate effort second. Climb only when evidence justifies it.", "Do not use Model first. Do not climb on evidence.")
+        negated = source.replace(
+            "   - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**",
+            "   - **Never model first; choose the task-appropriate effort second.** **Do not climb only when evidence justifies it.**",
+        )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "negated.md"
             path.write_text(negated, encoding="utf-8")
@@ -97,7 +99,11 @@ version: 1.3.0
             "   - Choose effort before model. Do not climb based on evidence.",
             1,
         )
-        decoy = reversed_procedure + "\n## Notes\nModel first; choose the task-appropriate effort second. Climb only when evidence justifies it.\n"
+        decoy = reversed_procedure.replace(
+            "## Procedure\n",
+            "## Procedure notes\n   - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**\n\n## Procedure\n",
+            1,
+        )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "decoy.md"
             path.write_text(decoy, encoding="utf-8")
