@@ -88,9 +88,15 @@ def strip_html_comments(text: str) -> str:
     return re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
 
 
-def extract_output_contract(text: str) -> str:
-    match = re.search(r"(?ms)^##\s+Output contract\b.*?(?=^##\s+|\Z)", text)
+def extract_section(text: str, heading: str) -> str:
+    match = re.search(
+        rf"(?ms)^##\s+{re.escape(heading)}\b.*?(?=^##\s+|\Z)", text
+    )
     return match.group(0) if match else ""
+
+
+def extract_output_contract(text: str) -> str:
+    return extract_section(text, "Output contract")
 
 
 def validate_skill_file(
@@ -101,6 +107,7 @@ def validate_skill_file(
         return [f"missing skill file: {path}"]
     text = path.read_text(encoding="utf-8")
     clean_text = strip_html_comments(text)
+    procedure = extract_section(clean_text, "Procedure")
     contract = extract_output_contract(clean_text)
     fields, parse_errors = read_frontmatter(text)
     errors.extend(f"{path}: {error}" for error in parse_errors)
@@ -117,7 +124,9 @@ def validate_skill_file(
     for token in REQUIRED_OUTPUT_FIELDS:
         if token not in contract:
             errors.append(f"{path}: missing output-contract field {token}")
-    lower = clean_text.lower()
+    lower = procedure.lower()
+    if not procedure:
+        errors.append(f"{path}: missing operative Procedure section")
     if "recommend only" not in lower:
         errors.append(f"{path}: recommend-only behavior is not stated")
     if "do not change" not in lower and "do not auto-apply" not in lower:

@@ -90,6 +90,21 @@ version: 1.3.0
             self.assertTrue(any("affirmative model-first" in error for error in errors))
             self.assertTrue(any("affirmative evidence-based" in error for error in errors))
 
+    def test_decoy_guidance_outside_procedure_fails(self):
+        source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        reversed_procedure = source.replace(
+            "   - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**",
+            "   - Choose effort before model. Do not climb based on evidence.",
+            1,
+        )
+        decoy = reversed_procedure + "\n## Notes\nModel first; choose the task-appropriate effort second. Climb only when evidence justifies it.\n"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "decoy.md"
+            path.write_text(decoy, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("affirmative model-first" in error for error in errors))
+            self.assertTrue(any("affirmative evidence-based" in error for error in errors))
+
     def test_frontmatter_comments_and_quotes(self):
         source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
         valid = source.replace(
