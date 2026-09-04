@@ -1,5 +1,7 @@
 # Install — decode-effort (Claude Code)
 
+Release: **v1.3.0**
+
 User-invoked only. Recommends **model + effort** for the current session, a Linear issue, or free text.
 
 ```bash
@@ -27,5 +29,20 @@ cp references/*.md ~/.agents/skills/decode-effort/references/
 ```
 
 Does **not** change settings unless you ask. Recommend only.
+
+## Validate the repository and installed copy
+
+From the repository root, run:
+
+```bash
+python3 scripts/validate_skill.py --repo . --scope repo --edition claude --expected-version 1.3.0
+python3 -m unittest discover -s tests -v
+```
+
+After copying the skill to `~/.claude/skills/decode-effort`, validate the installed subset from this repository root:
+
+```bash
+python3 scripts/validate_skill.py --repo "$HOME/.claude/skills/decode-effort" --scope installed --edition claude --expected-version 1.3.0
+```
 
 Sister skill (Codex): `Roofing-Business-Partner/decode-effort-codex`
