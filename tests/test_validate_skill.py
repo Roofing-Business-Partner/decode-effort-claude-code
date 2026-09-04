@@ -46,10 +46,10 @@ class ValidateSkillTests(unittest.TestCase):
             shutil.copy2(ROOT / "SKILL.md", installed / "SKILL.md")
             for source in (ROOT / "references").glob("*.md"):
                 shutil.copy2(source, installed / "references" / source.name)
-            (installed / "references" / "effort-decoder-core.md").unlink()
+            (installed / "references" / "openai-codex-ladder.md").unlink()
             errors = validate_skill.validate_installed(installed, "claude", "1.3.0")
             self.assertTrue(errors)
-            self.assertTrue(any("core reference missing" in error for error in errors))
+            self.assertTrue(any("missing installed reference" in error for error in errors))
 
     def test_claude_fable_leakage_in_codex_ladder_fails(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -78,6 +78,27 @@ version: 1.3.0
             )
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("missing output-contract field" in error for error in errors))
+
+    def test_frontmatter_comments_and_quotes(self):
+        source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
+        valid = source.replace(
+            "disable-model-invocation: true",
+            "disable-model-invocation: true # user-only",
+            1,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "valid.md"
+            path.write_text(valid, encoding="utf-8")
+            self.assertEqual(validate_skill.validate_skill_file(path, "1.3.0", "claude"), [])
+
+            malformed = valid.replace(
+                "disable-model-invocation: true # user-only",
+                'disable-model-invocation: "true',
+                1,
+            )
+            path.write_text(malformed, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("unbalanced quoted scalar" in error for error in errors))
 
 
 if __name__ == "__main__":

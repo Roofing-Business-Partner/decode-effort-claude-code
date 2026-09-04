@@ -26,6 +26,42 @@ REQUIRED_OUTPUT_FIELDS = (
 )
 
 
+def parse_scalar(value: str) -> str:
+    """Parse the deliberately small scalar subset used by this frontmatter."""
+    value = value.strip()
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(value):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif quote == '"' and char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            if index != 0:
+                raise ValueError("quotes must start a quoted scalar")
+            quote = char
+        elif char == "#" and (index == 0 or value[index - 1].isspace()):
+            value = value[:index]
+            break
+    if quote is not None or escaped:
+        raise ValueError("unbalanced quoted scalar")
+    value = value.strip()
+    if not value:
+        return ""
+    if value[0] in {"'", '"'}:
+        quote = value[0]
+        if len(value) < 2 or value[-1] != quote:
+            raise ValueError("unbalanced quoted scalar")
+        return value[1:-1]
+    if "'" in value or '"' in value:
+        raise ValueError("quotes must wrap a scalar")
+    return value
+
+
 def read_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
     errors: list[str] = []
     if not text.startswith("---\n"):
@@ -41,7 +77,10 @@ def read_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
             errors.append(f"frontmatter line is not key:value: {line}")
             continue
         key, value = line.split(":", 1)
-        fields[key.strip()] = value.strip().strip('"').strip("'")
+        try:
+            fields[key.strip()] = parse_scalar(value)
+        except ValueError as exc:
+            errors.append(f"frontmatter value for {key.strip()} is invalid: {exc}")
     return fields, errors
 
 
@@ -179,7 +218,11 @@ def validate_repo(repo: Path, edition: str, expected_version: str) -> list[str]:
 
 def validate_installed(repo: Path, edition: str, expected_version: str) -> list[str]:
     """Validate the subset copied to ~/.claude/skills or ~/.codex/skills."""
-    errors = validate_skill_file(repo / "SKILL.md", expected_version, edition)
+    errors: list[str] = []
+    for relative in REQUIRED_REFERENCES:
+        if not (repo / relative).is_file():
+            errors.append(f"missing installed reference: {relative}")
+    errors.extend(validate_skill_file(repo / "SKILL.md", expected_version, edition))
     errors.extend(validate_references(repo, edition))
     return errors
 
