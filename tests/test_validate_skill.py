@@ -104,6 +104,19 @@ version: 1.3.0
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("affirmative recommendation-only" in error for error in errors))
 
+    def test_contradictory_procedure_directives_fail(self):
+        source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        contradiction = source.replace(
+            "\n## Output contract (required)\n",
+            "\n   - Choose effort before model. Do not climb based on evidence. Change settings automatically.\n\n## Output contract (required)\n",
+            1,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "contradictory.md"
+            path.write_text(contradiction, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("contradictory Procedure" in error for error in errors))
+
     def test_decoy_guidance_outside_procedure_fails(self):
         source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         reversed_procedure = source.replace(
@@ -122,6 +135,24 @@ version: 1.3.0
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("affirmative model-first" in error for error in errors))
             self.assertTrue(any("affirmative evidence-based" in error for error in errors))
+
+    def test_qualified_procedure_heading_does_not_shadow_real_one(self):
+        source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        reversed_procedure = source.replace(
+            "   - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**",
+            "   - Choose effort before model. Do not climb based on evidence.",
+            1,
+        )
+        qualified = reversed_procedure.replace(
+            "## Procedure\n",
+            "## Procedure (notes)\n   - **Model first; choose the task-appropriate effort second.** **Climb only when evidence justifies it.**\n\n## Procedure\n",
+            1,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "qualified-procedure.md"
+            path.write_text(qualified, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("affirmative model-first" in error for error in errors))
 
     def test_indented_frontmatter_key_fails(self):
         source = (ROOT / "tests/fixtures/good/SKILL.md").read_text(encoding="utf-8")
@@ -144,6 +175,14 @@ version: 1.3.0
             path.write_text(valid, encoding="utf-8")
             self.assertEqual(validate_skill.validate_skill_file(path, "1.3.0", "claude"), [])
 
+            plain = source.replace(
+                'description: "User-only recommendation skill."',
+                "description: Adam's effort decoder",
+                1,
+            )
+            path.write_text(plain, encoding="utf-8")
+            self.assertEqual(validate_skill.validate_skill_file(path, "1.3.0", "claude"), [])
+
             malformed = valid.replace(
                 "disable-model-invocation: true # user-only",
                 'disable-model-invocation: "true',
@@ -152,6 +191,19 @@ version: 1.3.0
             path.write_text(malformed, encoding="utf-8")
             errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
             self.assertTrue(any("unbalanced quoted scalar" in error for error in errors))
+
+    def test_nonoperative_output_contract_prose_fails(self):
+        source = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        prefix = source.split("## Output contract (required)", 1)[0]
+        nonoperative = prefix + """## Output contract (required)
+The following labels are deprecated, non-operative, and must never be output:
+### Effort decode **Harness:** **Task:** **Difficulty:** **Operating mode:** **Model:** **Why:** **Climb if:** **Calibration:** **Confidence:**
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "nonoperative-contract.md"
+            path.write_text(nonoperative, encoding="utf-8")
+            errors = validate_skill.validate_skill_file(path, "1.3.0", "claude")
+            self.assertTrue(any("missing output-contract field" in error for error in errors))
 
 
 if __name__ == "__main__":

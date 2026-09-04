@@ -24,6 +24,13 @@ REQUIRED_OUTPUT_FIELDS = (
     "**Calibration:**",
     "**Confidence:**",
 )
+CONTRADICTORY_PROCEDURE_PATTERNS = (
+    r"\b(?:choose|select|pick)\s+(?:the\s+)?(?:task-appropriate\s+)?effort\s+before\s+(?:the\s+)?model\b",
+    r"\b(?:never|do not|don't|avoid)\s+(?:use\s+)?model first\b",
+    r"\b(?:do not|don't|never|avoid)\s+(?:climb|climbing)\b[^.\n]*(?:evidence|justify)",
+    r"\b(?:change|set|modify)\s+(?:the\s+)?(?:model|effort|settings|config)\b[^.\n]*(?:automatically|yourself|without|on your own)",
+    r"\b(?:do not|don't|never)\s+recommend only\b",
+)
 
 
 def parse_scalar(value: str) -> str:
@@ -41,9 +48,9 @@ def parse_scalar(value: str) -> str:
                 quote = None
             continue
         if char in {"'", '"'}:
-            if index != 0:
-                raise ValueError("quotes must start a quoted scalar")
-            quote = char
+            if index == 0:
+                quote = char
+            # Apostrophes and quotation marks are valid inside plain YAML scalars.
         elif char == "#" and (index == 0 or value[index - 1].isspace()):
             value = value[:index]
             break
@@ -57,8 +64,6 @@ def parse_scalar(value: str) -> str:
         if len(value) < 2 or value[-1] != quote:
             raise ValueError("unbalanced quoted scalar")
         return value[1:-1]
-    if "'" in value or '"' in value:
-        raise ValueError("quotes must wrap a scalar")
     return value
 
 
@@ -91,16 +96,27 @@ def strip_html_comments(text: str) -> str:
     return re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
 
 
-def extract_section(text: str, heading: str) -> str:
+def extract_section(text: str, heading: str, allow_parenthetical: bool = False) -> str:
+    suffix = r"(?:[ \t]+\([^)]*\))?" if allow_parenthetical else ""
     match = re.search(
-        rf"(?ms)^##[ \t]+{re.escape(heading)}(?:[ \t]+\([^)]*\))?[ \t]*$.*?(?=^##[ \t]+|\Z)",
+        rf"(?ms)^##[ \t]+{re.escape(heading)}{suffix}[ \t]*$.*?(?=^##[ \t]+|\Z)",
         text,
     )
     return match.group(0) if match else ""
 
 
 def extract_output_contract(text: str) -> str:
-    return extract_section(text, "Output contract")
+    return extract_section(text, "Output contract", allow_parenthetical=True)
+
+
+def has_output_field(contract: str, token: str) -> bool:
+    if token == "### Effort decode":
+        return re.search(r"(?mi)^###[ \t]+Effort decode[ \t]*$", contract) is not None
+    label = token.split(":", 1)[0].strip("*")
+    return re.search(
+        rf"(?mi)^\s*-\s+\*\*{re.escape(label)}:\*\*",
+        contract,
+    ) is not None
 
 
 def validate_skill_file(
@@ -126,7 +142,7 @@ def validate_skill_file(
     if fields.get("user-invocable") != "true":
         errors.append(f"{path}: user-invocable must be true")
     for token in REQUIRED_OUTPUT_FIELDS:
-        if token not in contract:
+        if not has_output_field(contract, token):
             errors.append(f"{path}: missing output-contract field {token}")
     lower = procedure.lower()
     if not procedure:
@@ -145,19 +161,23 @@ def validate_skill_file(
         errors.append(f"{path}: affirmative model-first ordering is not stated")
     if affirmative_workflow is None:
         errors.append(f"{path}: affirmative evidence-based climbing is not stated")
+    for pattern in CONTRADICTORY_PROCEDURE_PATTERNS:
+        if re.search(pattern, procedure, flags=re.IGNORECASE):
+            errors.append(f"{path}: contradictory Procedure directive is present")
+            break
     if "official-guidance-only" not in clean_text or "stale/unknown" not in clean_text:
         errors.append(f"{path}: calibration vocabulary is incomplete")
 
     detected_edition: str | None = None
     if "Claude Code Edition" in clean_text:
         detected_edition = "claude"
-        if "**Effort:**" not in contract or "claude --effort" not in clean_text:
+        if not has_output_field(contract, "**Effort:**") or "claude --effort" not in clean_text:
             errors.append(f"{path}: Claude effort output/set instructions are incomplete")
     if "Codex Edition" in clean_text:
         if detected_edition is not None:
             errors.append(f"{path}: multiple edition identities are present")
         detected_edition = "codex"
-        if "**Reasoning effort:**" not in contract or "model_reasoning_effort" not in clean_text:
+        if not has_output_field(contract, "**Reasoning effort:") or "model_reasoning_effort" not in clean_text:
             errors.append(f"{path}: Codex reasoning-effort output/set instructions are incomplete")
     if edition is not None and detected_edition != edition:
         errors.append(
